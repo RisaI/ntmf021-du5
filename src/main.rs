@@ -19,28 +19,22 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .long("resolution")
                 .help("How many equidistant points to plot in the 0-1 interval")
                 .required(false)
-                .takes_value(true),
+                .takes_value(true)
+                .default_value("100"),
             Arg::with_name("sample")
                 .short("s")
                 .long("sample")
                 .help("Statistical sample size")
                 .required(false)
-                .takes_value(true),
+                .takes_value(true)
+                .default_value("10000"),
         ])
         .get_matches();
 
     // Load arguments
     let n: usize = matches.value_of("SIDE").unwrap().parse()?;
-    let resolution: usize = if let Some(val) = matches.value_of("resolution") {
-        val.parse()?
-    } else {
-        100
-    };
-    let sample_size: usize = if let Some(val) = matches.value_of("sample") {
-        val.parse()?
-    } else {
-        10_000
-    };
+    let resolution: usize = matches.value_of("resolution").unwrap().parse()?;
+    let sample_size: usize = matches.value_of("sample").unwrap().parse()?;
 
     // Check argument validity
     if n == 0 {
