@@ -29,6 +29,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         ])
         .get_matches();
 
+    // Load arguments
     let n: usize = matches.value_of("SIDE").unwrap().parse()?;
     let resolution: usize = if let Some(val) = matches.value_of("resolution") {
         val.parse()?
@@ -41,6 +42,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         10_000
     };
 
+    // Check argument validity
     if n == 0 {
         eprintln!("You must set a non-zero lattice");
         return Ok(());
@@ -51,13 +53,16 @@ fn main() -> Result<(), Box<dyn Error>> {
         return Ok(());
     }
 
+    // Run for each probability point parallelly
     let result: Vec<(f64, f64)> = (0..=resolution)
         .into_par_iter()
         .map(|pidx| {
+            // Calculate equidistant prob. points
             let p = pidx as f64 / (resolution as f64);
 
             (
                 p,
+                // Parallelly calculate independent samples
                 (0..sample_size)
                     .into_par_iter()
                     .map(|_| {
@@ -75,6 +80,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         })
         .collect();
 
+    // Print the result to `stdout`
     for (p, t) in result {
         println!("{:.4}\t{:.5}", p, t);
     }
@@ -82,6 +88,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+/// What resides at a point of a lattice
 #[derive(Clone, Copy)]
 enum LatticePoint {
     Empty,
@@ -89,23 +96,32 @@ enum LatticePoint {
     Burning,
 }
 
+/// Did the sweep result in a new burning tree?
 enum SweepResult {
+    /// No new burning tree
     Identity,
+    /// One or more trees were ignited
     Ignited,
 }
 
+/// A structure defining the lattice
 struct Lattice {
     side: usize,
     current: Box<[LatticePoint]>,
-    // buffer: Box<[LatticePoint]>,
 }
 
 impl Lattice {
+    /// Generate a new lattice of size `n*n`
+    /// 
+    /// `n` - the size of a side
+    /// 
+    /// `p` - the occupation probability
     pub fn generate(n: usize, p: f64) -> Self {
         let field = (0..(n * n))
             .map(|i| {
                 if rand::random::<f64>() < p {
                     if i < n {
+                        // Ignite the first row
                         LatticePoint::Burning
                     } else {
                         LatticePoint::Tree
@@ -122,13 +138,14 @@ impl Lattice {
         }
     }
 
+    /// Perform a sweep
     pub fn sweep(&mut self) -> SweepResult {
         let mut result = SweepResult::Identity;
 
         let side = self.side;
 
-        for i in 0..side {
-            for j in 0..side {
+        for i in 0..side { // Row
+            for j in 0..side { // Col
                 if let LatticePoint::Tree = self[(i, j)] {
                     let should_burn = (i > 0 && matches!(self[(i - 1, j)], LatticePoint::Burning))
                         || (i < side - 1 && matches!(self[(i + 1, j)], LatticePoint::Burning))
